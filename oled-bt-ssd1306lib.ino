@@ -36,7 +36,12 @@ Adafruit_BLE_UART BTLEserial = Adafruit_BLE_UART(10, 2, 9);
 //#define OLED_RESET 4
 //Adafruit_SSD1306 display(OLED_MOSI, OLED_CLK, OLED_DC, OLED_RESET, OLED_CS);
 
+
+// piezo element
+int touchSensor = A0;
+
 void setup() {
+  Serial.begin(9600);
   oled.reset(8);	
   
   bootDisplay();
@@ -46,6 +51,8 @@ void setup() {
   
   delay(2000);
   
+  Serial.println("setup");
+ 
   BTLEserial.begin();
 }
 
@@ -58,9 +65,38 @@ void setup() {
 aci_evt_opcode_t laststatus = ACI_EVT_DISCONNECTED;
 
 void loop() {
+ 
+  connectBluetooth();
   // put your main code here, to run repeatedly:
   // Tell the nRF8001 to do whatever it should be working on.
-   BTLEserial.pollACI();
+  int sensorValue = analogRead(A0);
+  // print out the value you read:
+  if(sensorValue > 20) {
+    Serial.println(sensorValue);
+  }
+  
+   if (laststatus == ACI_EVT_CONNECTED) {
+    // Lets see if there's any data for us!
+     while (BTLEserial.available()) {
+       
+        char c = BTLEserial.read();
+        oled.print(c);
+
+     }
+   } 
+  delay(1);
+   
+   
+}
+
+void bootDisplay() {
+  oled.begin(&Adafruit128x64, OLED_CS, OLED_DC, OLED_CLK, OLED_DATA);
+  oled.setFont(Arial14);
+}
+
+
+void connectBluetooth() {
+  BTLEserial.pollACI();
   
   // Ask what is our current status
    aci_evt_opcode_t status = BTLEserial.getState();
@@ -77,7 +113,12 @@ void loop() {
     
       if (status == ACI_EVT_CONNECTED) {
         oled.clear();
-        oled.println(F("* iPhone connected!"));
+        oled.setCol(0);
+        oled.println(F("* iPhone"));
+        oled.println(F("connected!"));
+        oled.setCol(60);
+        oled.setRow(20);
+        oled.setFont(CalLite24);
       }
     
       if (status == ACI_EVT_DISCONNECTED) {
@@ -92,19 +133,5 @@ void loop() {
       // OK set the last status change to this one
       laststatus = status;
    }
-  
-   if (status == ACI_EVT_CONNECTED) {
-    // Lets see if there's any data for us!
-     while (BTLEserial.available()) {
-       
-        char c = BTLEserial.read();
-        oled.print(c);
-
-     }
-   }  
-}
-
-void bootDisplay() {
-  oled.begin(&Adafruit128x64, OLED_CS, OLED_DC, OLED_CLK, OLED_DATA);
-  oled.setFont(Callibri14);
+ 
 }
